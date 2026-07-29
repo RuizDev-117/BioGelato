@@ -46,11 +46,23 @@ static constexpr uint8_t TIME_DEFAULT_INDEX = TIME_OPTION_COUNT - 1;
 struct UIStateTable {
     void (*onEnter)(void);
     void (*handleEvent)(EncoderEvent evt);
+    void (*handleMovement)(int delta); /**< Batch-move handler; nullptr = fall back to N handleEvent calls */
     void (*onExit)(void);
 };
 
 void UI_setState(UIState newState);
 void UI_processEvent(EncoderEvent evt);
+
+/**
+ * @brief Applies a net encoder delta to the current state in one render pass.
+ *
+ * Accumulates multiple ENC_LEFT / ENC_RIGHT ticks into a single logical move
+ * and redraws only once. States that don't implement handleMovement fall back
+ * to calling UI_processEvent for each individual step.
+ *
+ * @param delta Signed net tick count (positive = right / up, negative = left / down).
+ */
+void UI_processMovement(int delta);
 
 static_assert(MENU_COUNT == 3, "MENU_COUNT must be 3 to match mainMenu arrays");
 

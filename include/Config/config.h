@@ -102,6 +102,13 @@ typedef enum
     MOTOR_CMD_CLEAN_SLOW,    /**< Execute slow cleaning routine */
     MOTOR_CMD_CLEAN_MANUAL,  /**< Execute manual cleaning routine */
     MOTOR_CMD_CLEAN_PURGE,   /**< Execute purge cleaning routine */
+
+    /* Internal commands — posted by timer callbacks to delegate state changes
+     * to TaskMotor. Do not send these from any other task. */
+    MOTOR_CMD_INTERNAL_KICKSTART, /**< Apply kickstart target duty after boost phase */
+    MOTOR_CMD_INTERNAL_TIMEOUT,   /**< End timed operation and notify completion */
+    MOTOR_CMD_INTERNAL_CYCLE,     /**< Advance cleaning sequence ON/OFF phase */
+    MOTOR_CMD_INTERNAL_DRIP,      /**< Advance drip burst ON/OFF phase */
 }MotorCmdType;
 
 /**

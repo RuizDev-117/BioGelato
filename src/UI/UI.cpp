@@ -28,8 +28,9 @@ static TFT_eSprite logoIconSprite = TFT_eSprite(&tft);
 /**
  * @brief Initializes TFT display, sprite buffers, and backlight GPIO.
  *
- * PIN_TFT_LED is held LOW on init; the caller enables it after the boot logo
- * renders to avoid displaying noise during TFT driver startup.
+ * The backlight is active-HIGH (HIGH = on). It is enabled here only after the
+ * TFT driver and sprites are set up and the screen has been cleared to black,
+ * so no driver-startup noise is shown.
  */
 void UI_init()
 {
@@ -49,7 +50,7 @@ void UI_init()
     logoIconSprite.createSprite(ICON_WIDTH*4, ICON_HEIGHT*4);
 
     pinMode(PIN_TFT_LED, OUTPUT);
-    digitalWrite(PIN_TFT_LED, LOW);
+    digitalWrite(PIN_TFT_LED, HIGH);
 }
 
 void UI_drawIcon(int16_t x, int16_t y, const uint16_t* icon)
@@ -167,24 +168,32 @@ void UI_drawSpeedStatic()
 
 void UI_updateSpeed(int speed)
 {
+    static int prevSpeed = -1;
     char buf[8];
-    snprintf(buf, sizeof(buf), "%d", speed);
-
-    tft.fillRect(0, SCREEN_HEIGHT / MENU_COUNT, SCREEN_WIDTH, SCREEN_HEIGHT, TFT_BLACK);
-
-    tft.setTextDatum(MR_DATUM);
-    tft.setFreeFont(&FreeSans24pt7b);
-    tft.setTextColor(TFT_GREEN, TFT_BLACK);
 
     int centerX = SCREEN_WIDTH  / 2 + 70;
     int centerY = SCREEN_HEIGHT / 2 + 20;
+
+    tft.setTextDatum(MR_DATUM);
+    tft.setFreeFont(&FreeSans24pt7b);
+
+    /* Erase only the previous number's pixels instead of blanking the whole area. */
+    if (prevSpeed >= 0 && prevSpeed != speed) {
+        snprintf(buf, sizeof(buf), "%d", prevSpeed);
+        tft.setTextColor(TFT_BLACK, TFT_BLACK);
+        tft.drawString(buf, centerX, centerY);
+    }
+
+    snprintf(buf, sizeof(buf), "%d", speed);
+    tft.setTextColor(TFT_GREEN, TFT_BLACK);
     tft.drawString(buf, centerX, centerY);
 
+    prevSpeed = speed;
     tft.setFreeFont(nullptr);
 }
 
 static const char* const timeLabels[] = {
-    "15 MIN", "30 MIN", "45 MIN", "60 MIN", "CONT"
+    "15 MIN", "30 MIN", "45 MIN", "60 MIN", "PARAR"
 };
 
 void UI_drawTimeSelectStatic()
@@ -208,7 +217,7 @@ void UI_updateTimeSelect(int index)
 }
 
 static const char* const cleanLabels[] = {
-    "RAPIDO", "LENTO", "PURGA", "MANUAL"
+    "RAPIDO", "LENTO", "PURGA", "PARAR"
 };
 
 void UI_drawReviewSystem()

@@ -29,13 +29,13 @@ static const MotorCmdType cleanCmdMap[] =
     MOTOR_CMD_CLEAN_FAST,
     MOTOR_CMD_CLEAN_SLOW,
     MOTOR_CMD_CLEAN_PURGE,
-    MOTOR_CMD_CLEAN_MANUAL
+    MOTOR_CMD_STOP
 };
 
 static constexpr uint32_t FAST_THRESHOLD_MS  = 80;
 static constexpr uint32_t RESET_THRESHOLD_MS = 300;
-static constexpr uint8_t  MAX_STEP           = 10;
-static constexpr uint8_t  STEP_INCREMENT     = 2;
+static constexpr uint8_t  MAX_STEP           = 2;
+static constexpr uint8_t  STEP_INCREMENT     = 1;
 
 #define CLEAN_OPTION_COUNT (sizeof(cleanCmdMap)/sizeof(cleanCmdMap[0]))
 static_assert(sizeof(timeOptions)/sizeof(timeOptions[0]) == TIME_OPTION_COUNT,
@@ -92,9 +92,10 @@ static void handleGenericMenu(EncoderEvent evt,
             return;
     }
 
-    if (currentMenu < 0) currentMenu = optionCount - 1;
-    if (currentMenu >= optionCount) currentMenu = 0;
+    if (currentMenu < 0) currentMenu = 0;
+    if (currentMenu >= optionCount) currentMenu = optionCount - 1;
 
+    if (currentMenu == lastMenu) return;
     UI_updateMenuSelection(titles, icons, lastMenu, currentMenu, optionCount);
     lastMenu = currentMenu;
 }
@@ -104,8 +105,13 @@ static void handleConfirmDialog(EncoderEvent evt, void (*onAccept)(void), UIStat
     switch (evt)
     {
         case ENC_LEFT:
+            if (confirmIndex == 0) break;
+            confirmIndex = 0;
+            UI_drawConfirmButtons(confirmIndex);
+            break;
         case ENC_RIGHT:
-            confirmIndex ^= 1; // toggle 0<->1
+            if (confirmIndex == 1) break;
+            confirmIndex = 1;
             UI_drawConfirmButtons(confirmIndex);
             break;
         case BTN_SHORT:
@@ -140,10 +146,10 @@ static inline uint8_t dinamicEncoder(uint32_t deltaTime, uint8_t& currentStep)
     return currentStep;
 }
 
-static inline uint8_t clampIndex(int v,uint8_t max)
+static inline uint8_t clampIndex(int v, uint8_t max)
 {
-    if(v < 0) return max - 1;
-    if(v >= max) return 0;
+    if(v < 0) return 0;
+    if(v >= max) return max - 1;
     return (uint8_t)v;
 }
 
@@ -262,6 +268,7 @@ static void handleMainStart(EncoderEvent evt)
 
 static void handleTimeSelect(EncoderEvent evt)
 {
+    uint8_t prev = timeIndex;
     switch(evt)
     {
         case ENC_LEFT:
@@ -271,7 +278,10 @@ static void handleTimeSelect(EncoderEvent evt)
             timeIndex = clampIndex(timeIndex + 1, TIME_OPTION_COUNT);
             break;
         case BTN_SHORT:
-            sendMotorRequest(MOTOR_CMD_START_TIMED, 0, timeOptions[timeIndex]);
+            if (timeOptions[timeIndex] == 0) {
+                /* PARAR option: stop all motor operations immediately. */
+                sendMotorRequest(MOTOR_CMD_STOP, 0, 0);
+            }
             sendBuzzerCommand(BUZZER_CMD_CONFIRM);
             return;
         case BTN_LONG:
@@ -279,7 +289,8 @@ static void handleTimeSelect(EncoderEvent evt)
             return;
         default: return;
     }
-    UI_updateTimeSelect(timeIndex);
+    if (timeIndex != prev)
+        UI_updateTimeSelect(timeIndex);
 }
 
 static void handleSpeedControl(EncoderEvent evt)
@@ -312,7 +323,12 @@ static void handleSpeedControl(EncoderEvent evt)
             break;
         }
         case BTN_SHORT:
-            sendMotorRequest(MOTOR_CMD_SET_SPEED, motorSpeed, 0);
+            if (timeOptions[timeIndex] == 0) {
+                /* PARAR selected — run continuous (no timeout). */
+                sendMotorRequest(MOTOR_CMD_SET_SPEED, motorSpeed, 0);
+            } else {
+                sendMotorRequest(MOTOR_CMD_START_TIMED, motorSpeed, timeOptions[timeIndex]);
+            }
             sendBuzzerCommand(BUZZER_CMD_CONFIRM);
             speedStep = 1;
             wasAtLimit = false;
@@ -345,6 +361,7 @@ static void handleSystemMenu(EncoderEvent evt)
 
 static void handleSystem(EncoderEvent evt)
 {
+    uint8_t prev = cleanModeIndex;
     switch(evt)
     {
         case ENC_LEFT:
@@ -362,7 +379,8 @@ static void handleSystem(EncoderEvent evt)
             return;
         default: return;
     }
-    UI_updateSystemSelect(cleanModeIndex);
+    if (cleanModeIndex != prev)
+        UI_updateSystemSelect(cleanModeIndex);
 }
 
 static void handleSaveConfirm(EncoderEvent evt)
@@ -382,39 +400,101 @@ static void handleSettingsPowerOff(EncoderEvent evt)
 }
 
 // =====================
+// MOVEMENT HANDLERS
+// =====================
+static inline int clampDelta(int index, int delta, int count)
+{
+    int result = index + delta;
+    if (result < 0)      return 0;
+    if (result >= count) return count - 1;
+    return result;
+}
+
+static void handleMainMenuMovement(int delta)
+{
+    int next = clampDelta(currentMenu, delta, MENU_COUNT);
+    if (next == currentMenu) return;
+    currentMenu = next;
+    UI_updateMenuSelection(mainMenuTitles, mainMenuIcons, lastMenu, currentMenu, MENU_COUNT);
+    lastMenu = currentMenu;
+}
+
+static void handleStartMenuMovement(int delta)
+{
+    int next = clampDelta(currentMenu, delta, MENU_COUNT - 1);
+    if (next == currentMenu) return;
+    currentMenu = next;
+    UI_updateMenuSelection(mainStartTitles, mainStartIcons, lastMenu, currentMenu, MENU_COUNT - 1);
+    lastMenu = currentMenu;
+}
+
+static void handleSystemMenuMovement(int delta)
+{
+    int next = clampDelta(currentMenu, delta, MENU_COUNT);
+    if (next == currentMenu) return;
+    currentMenu = next;
+    UI_updateMenuSelection(systemMenuTitles, systemMenuIcons, lastMenu, currentMenu, MENU_COUNT);
+    lastMenu = currentMenu;
+}
+
+static void handleTimeSelectMovement(int delta)
+{
+    uint8_t next = (uint8_t)clampDelta(timeIndex, delta, TIME_OPTION_COUNT);
+    if (next == timeIndex) return;
+    timeIndex = next;
+    UI_updateTimeSelect(timeIndex);
+}
+
+static void handleSystemSelectMovement(int delta)
+{
+    uint8_t next = (uint8_t)clampDelta(cleanModeIndex, delta, CLEAN_OPTION_COUNT);
+    if (next == cleanModeIndex) return;
+    cleanModeIndex = next;
+    UI_updateSystemSelect(cleanModeIndex);
+}
+
+static void handleConfirmMovement(int delta)
+{
+    int next = clampDelta(confirmIndex, delta, 2);
+    if (next == confirmIndex) return;
+    confirmIndex = next;
+    UI_drawConfirmButtons(confirmIndex);
+}
+
+// =====================
 // STATE TABLE
 // =====================
 static const UIStateTable stateTable[] = {
 
     // MENU_INIT
-    { enterInit,         handleInit,         nullptr },
+    { enterInit,         handleInit,             nullptr,                    nullptr },
 
     // MENU_MAIN
-    { enterMainMenu,     handleMainMenu,     nullptr },
+    { enterMainMenu,     handleMainMenu,          handleMainMenuMovement,     nullptr },
 
-    //MENU_MAIN_START_MOTOR
-    { enterStartMenu,    handleMainStart,    nullptr },
+    // MENU_MAIN_START_MOTOR
+    { enterStartMenu,    handleMainStart,         handleStartMenuMovement,    nullptr },
 
     // MENU_MAIN_TIME_SELECT
-    { enterTimeSelect,   handleTimeSelect,   nullptr },
+    { enterTimeSelect,   handleTimeSelect,        handleTimeSelectMovement,   nullptr },
 
-    // MENU_MAIN_SPEED_CONTROL
-    { enterSpeedControl, handleSpeedControl, nullptr },
+    // MENU_MAIN_SPEED_CONTROL — dynamic encoder step logic; falls back to per-event calls
+    { enterSpeedControl, handleSpeedControl,      nullptr,                    nullptr },
 
     // MENU_MAIN_REVIEW
-    { enterSystemMenu,   handleSystemMenu,   nullptr },
+    { enterSystemMenu,   handleSystemMenu,        handleSystemMenuMovement,   nullptr },
 
     // MENU_REVIEW_SYSTEM
-    { enterSystem,       handleSystem,       nullptr },
+    { enterSystem,       handleSystem,            handleSystemSelectMovement, nullptr },
 
     // MENU_REVIEW_SAVE_CONFIRM
-    { enterSaveConfirm,  handleSaveConfirm,  nullptr },
+    { enterSaveConfirm,  handleSaveConfirm,       handleConfirmMovement,      nullptr },
 
     // MENU_REVIEW_SOFTWARE
-    { UI_drawReviewSoft, handleSoftInfo,     nullptr },
+    { UI_drawReviewSoft, handleSoftInfo,          nullptr,                    nullptr },
 
     // MENU_POWER_OFF
-    { enterPowerOff,  handleSettingsPowerOff, nullptr }
+    { enterPowerOff,     handleSettingsPowerOff,  handleConfirmMovement,      nullptr },
 };
 
 // =====================
@@ -451,6 +531,24 @@ void UI_processEvent(EncoderEvent evt)
 {
     if (stateTable[currentState].handleEvent)
         stateTable[currentState].handleEvent(evt);
+}
+
+void UI_processMovement(int delta)
+{
+    if (delta == 0 || currentState >= UI_STATE_COUNT) return;
+
+    if (stateTable[currentState].handleMovement)
+    {
+        stateTable[currentState].handleMovement(delta);
+    }
+    else
+    {
+        /* Fall back for states with complex per-tick logic (e.g. speed control). */
+        EncoderEvent dir = (delta > 0) ? ENC_RIGHT : ENC_LEFT;
+        int steps = abs(delta);
+        for (int i = 0; i < steps; i++)
+            UI_processEvent(dir);
+    }
 }
 
 static_assert(UI_STATE_COUNT == (sizeof(stateTable) / sizeof(stateTable[0])));

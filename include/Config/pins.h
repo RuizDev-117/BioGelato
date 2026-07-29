@@ -23,7 +23,7 @@ static constexpr int PIN_MOTOR   = 21;
 /** @brief Passive buzzer PWM output. */
 static constexpr int PIN_BUZZER  = 47;
 
-/** @brief TFT backlight LED enable. */
-static constexpr int PIN_TFT_LED = 15;
+/** @brief TFT backlight LED enable (active-HIGH: HIGH = on, LOW = off). */
+static constexpr int PIN_TFT_LED = 2;
 
 #endif // PINS_H
