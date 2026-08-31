@@ -14,7 +14,7 @@
 #include "Tasks/TaskMotor.h"
 
 /** @brief Duration of a full purge cycle in milliseconds. */
-static constexpr uint32_t PURGE_DURATION_MS = 20000;
+static constexpr uint32_t PURGE_DURATION_MS = 15000;
 
 /** @brief Default burst amplitude for drip mode. */
 static constexpr uint8_t DRIP_PULSE_DUTY_DEFAULT = 70;

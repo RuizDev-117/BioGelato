@@ -193,7 +193,7 @@ void UI_updateSpeed(int speed)
 }
 
 static const char* const timeLabels[] = {
-    "15 MIN", "30 MIN", "45 MIN", "60 MIN", "PARAR"
+    "15 MIN", "30 MIN", "45 MIN", "60 MIN", "STOP"
 };
 
 void UI_drawTimeSelectStatic()
@@ -217,7 +217,7 @@ void UI_updateTimeSelect(int index)
 }
 
 static const char* const cleanLabels[] = {
-    "RAPIDO", "LENTO", "PURGA", "PARAR"
+    "RAPIDO", "LENTO", "PURGA", "STOP"
 };
 
 void UI_drawReviewSystem()
