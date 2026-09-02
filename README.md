@@ -92,3 +92,5 @@ platformio.ini   # Board, framework, and TFT_eSPI build-flag configuration
 
 - Firmware: feature-complete, hardware-validated, under active refinement
 - Enclosure: 3D-printed housing in development (FreeCAD) for the pump and HMI panel
+
+  <img width="1204" height="1600" alt="WhatsApp Image 2026-08-29 at 8 34 47 AM" src="https://github.com/user-attachments/assets/6a71cd19-f400-4e93-9fb1-48015fe2ea5d" />
