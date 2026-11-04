@@ -196,7 +196,7 @@ void Config_init();
  *                 MOTOR_CMD_START_TIMED; ignored for all other command types.
  * @param duration Run duration in ms; 0 means no timeout.
  */
-void sendMotorRequest(MotorCmdType type, int speed, uint32_t duration);
+bool sendMotorRequest(MotorCmdType type, int speed, uint32_t duration);
 
 /**
  * @brief Posts a power command to `xPowerQueue`.
@@ -223,6 +223,6 @@ void sendSettingsSave(SettingsCmdType type, int motorSpeed, uint8_t timeIndex);
  *
  * @param type Command type.
  */
-void sendBuzzerCommand(BuzzerCmdType type);
+bool sendBuzzerCommand(BuzzerCmdType type);
 
 #endif

@@ -30,7 +30,7 @@ void Config_init()
    xBuzzerQueue   = xQueueCreate(4, sizeof(BuzzerCommand)); configASSERT(xBuzzerQueue);
 }
 
-void sendMotorRequest(MotorCmdType type, int speed, uint32_t duration)
+bool sendMotorRequest(MotorCmdType type, int speed, uint32_t duration)
 {
     if (speed < 0)   speed = 0;
     if (speed > 100) speed = 100;
@@ -41,7 +41,8 @@ void sendMotorRequest(MotorCmdType type, int speed, uint32_t duration)
         .duration = duration
     };
 
-    configASSERT(xQueueSend(xMotorQueue, &cmd, 0) == pdPASS);
+    configASSERT(xMotorQueue != NULL);
+    return xQueueSend(xMotorQueue, &cmd, 0) == pdPASS;
 }
 
 void sendPowerRequest(PowerCmdType type)
@@ -63,9 +64,9 @@ void sendSettingsSave(SettingsCmdType type, int motorSpeed, uint8_t timeIndex)
     configASSERT(xQueueSend(xSettingsQueue, &cmd, 0) == pdPASS);
 }
 
-void sendBuzzerCommand(BuzzerCmdType type)
+bool sendBuzzerCommand(BuzzerCmdType type)
 {
-    BuzzerCommand cmd = {};
-    cmd.type = type;
-    configASSERT(xQueueSend(xBuzzerQueue, &cmd, 0) == pdPASS);
+    BuzzerCommand cmd = { .type = type };
+    configASSERT(xBuzzerQueue != NULL);
+    return xQueueSend(xBuzzerQueue, &cmd, 0) == pdPASS;
 }

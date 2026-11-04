@@ -135,27 +135,6 @@ static const Note MELODY_CYCLE_FINISHED[] = {
     {NOTE_D6, 350},
     {NOTE_C6, 600},
     {NOTE_SILENT, 250},
-
-    {NOTE_E5, 250},
-    {NOTE_G5, 250},
-    {NOTE_C6, 300},
-    {NOTE_E6, 300},
-    {NOTE_G6, 500},
-    {NOTE_F6, 350},
-    {NOTE_E6, 350},
-    {NOTE_D6, 500},
-    {NOTE_SILENT, 300},
-
-    {NOTE_C6, 400},
-    {NOTE_G5, 300},
-    {NOTE_E5, 300},
-    {NOTE_C6, 600},
-    {NOTE_SILENT, 200},
-
-    {NOTE_G5, 300},
-    {NOTE_C6, 400},
-    {NOTE_E6, 700},
-    {NOTE_C6, 900}
 };
 
 /**

@@ -371,8 +371,10 @@ static void handleSystem(EncoderEvent evt)
             cleanModeIndex = clampIndex(cleanModeIndex + 1, CLEAN_OPTION_COUNT);
             break;
         case BTN_SHORT:
-            sendMotorRequest(cleanCmdMap[cleanModeIndex], 0, 0);
-            sendBuzzerCommand(BUZZER_CMD_CONFIRM);
+            if (sendMotorRequest(cleanCmdMap[cleanModeIndex], 0, 0))
+                sendBuzzerCommand(BUZZER_CMD_CONFIRM);
+            else
+                sendBuzzerCommand(BUZZER_CMD_ERROR);
             return;
         case BTN_LONG:
             UI_setState(MENU_MAIN_REVIEW);
